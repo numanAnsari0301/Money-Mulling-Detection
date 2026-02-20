@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Forensics Engine | Money Muling Detection</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+
+    <!-- External CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="min-h-screen grid-bg relative">
+    <div class="scan-line"></div>
+
+   <!-- Header -->
+   <header class="glass-panel sticky top-0 z-50 border-b border-indigo-500/30">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center neon-border">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
+                    FINANCIAL FORENSICS ENGINE
+                </h1>
+                <p class="text-xs text-indigo-300 mono tracking-wider">RIFT 2026 • MONEY MULING DETECTION SYSTEM</p>
+            </div>
+        </div>
+        <div class="flex gap-4 text-sm mono">
+            <div class="px-4 py-2 bg-slate-800 rounded border border-indigo-500/30">
+                <span class="text-indigo-400">STATUS:</span>
+                <span id="system-status" class="text-green-400 ml-2">READY</span>
+            </div>
+        </div>
+    </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-6 py-8 space-y-6">
+    <!-- Upload Section -->
+    <section id="upload-section" class="glass-panel rounded-2xl p-8 neon-border">
+        <div class="text-center mb-8">
+            <h2 class="text-3xl font-bold mb-2 text-white">Initialize Investigation</h2>
+            <p class="text-slate-400">Upload transaction CSV to detect money muling networks</p>
+        </div>
+        
+        <div id="drop-zone" class="upload-zone rounded-xl p-12 text-center cursor-pointer relative overflow-hidden group">
+            <input type="file" id="csv-input" accept=".csv" class="hidden">
+            <div class="relative z-10">
+                <div class="w-20 h-20 mx-auto mb-4 bg-indigo-600/20 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <svg class="w-10 h-10 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                    </svg>
+                </div>
+                <p class="text-lg font-semibold text-white mb-2">Drop CSV file here or click to browse</p>
+                <p class="text-sm text-slate-400 mono">Required: transaction_id, sender_id, receiver_id, amount, timestamp</p>
+            </div>
+            <div class="absolute inset-0 bg-gradient-to-r from-indigo-600/0 via-indigo-600/10 to-indigo-600/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+        </div>
+
+        <div class="mt-6 flex justify-center gap-4">
+            <button onclick="loadDemoData()" class="px-6 py-3 bg-slate-800 hover:bg-slate-700 border border-indigo-500/50 rounded-lg text-indigo-300 transition-colors mono text-sm">
+                Load Demo Dataset
+            </button>
+            <button onclick="downloadTemplate()" class="px-6 py-3 bg-slate-800 hover:bg-slate-700 border border-indigo-500/50 rounded-lg text-indigo-300 transition-colors mono text-sm">
+                Download CSV Template
+            </button>
+        </div>
+    </section>
+
+    <!-- Processing Indicator -->
+    <section id="processing-section" class="hidden glass-panel rounded-2xl p-12 text-center">
+        <div class="relative w-24 h-24 mx-auto mb-6">
+            <div class="absolute inset-0 border-4 border-indigo-600/30 rounded-full"></div>
+            <div class="absolute inset-0 border-4 border-indigo-500 rounded-full border-t-transparent animate-spin"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+                <span class="text-2xl font-bold text-indigo-400" id="processing-percent">0%</span>
+            </div>
+        </div>
+        <h3 class="text-xl font-bold text-white mb-2">Analyzing Transaction Graph</h3>
+        <p class="text-slate-400 mono" id="processing-step">Building node index...</p>
+        <div class="mt-4 max-w-md mx-auto bg-slate-800 rounded-full h-2 overflow-hidden">
+            <div id="progress-bar" class="h-full bg-gradient-to-r from-indigo-500 to-cyan-500 w-0 transition-all duration-300"></div>
+        </div>
+    </section>
+
+    <!-- Results Dashboard -->
+    <section id="results-section" class="hidden space-y-6">
+        <!-- Metrics -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="metric-card p-6 rounded-xl">
+                <p class="text-slate-400 text-sm mono mb-1">ACCOUNTS ANALYZED</p>
+                <p class="text-3xl font-bold text-white" id="metric-accounts">0</p>
+            </div>
+            <div class="metric-card p-6 rounded-xl border-l-red-500">
+                <p class="text-slate-400 text-sm mono mb-1">SUSPICIOUS FLAGGED</p>
+                <p class="text-3xl font-bold text-red-400" id="metric-suspicious">0</p>
+            </div>
+            <div class="metric-card p-6 rounded-xl border-l-orange-500">
+                <p class="text-slate-400 text-sm mono mb-1">FRAUD RINGS</p>
+                <p class="text-3xl font-bold text-orange-400" id="metric-rings">0</p>
+            </div>
+            <div class="metric-card p-6 rounded-xl border-l-cyan-500">
+                <p class="text-slate-400 text-sm mono mb-1">PROCESSING TIME</p>
+                <p class="text-3xl font-bold text-cyan-400" id="metric-time">0.0s</p>
+            </div>
+        </div>
+
+        <!-- Graph Visualization -->
+        <div class="glass-panel rounded-2xl p-6 neon-border">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></span>
+                    Network Topology
+                </h3>
+                <div class="flex gap-2 text-xs mono">
+                    <span class="px-3 py-1 bg-slate-800 rounded-full border border-slate-600 flex items-center gap-2">
+                        <span class="w-2 h-2 bg-slate-400 rounded-full"></span> Normal
+                    </span>
+                    <span class="px-3 py-1 bg-red-900/30 rounded-full border border-red-500/50 flex items-center gap-2">
+                        <span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span> Suspicious
+                    </span>
+                    <span class="px-3 py-1 bg-orange-900/30 rounded-full border border-orange-500/50 flex items-center gap-2">
+                        <span class="w-2 h-2 bg-orange-500 rounded-full"></span> Ring Member
+                    </span>
+                </div>
+            </div>
+            <div id="graph-container" class="w-full h-[600px] rounded-lg border border-slate-700 relative overflow-hidden">
+                <div id="graph-svg"></div>
+                <div id="node-tooltip" class="tooltip hidden"></div>
+            </div>
+        </div>
+
+        <!-- Fraud Rings Table -->
+        <div class="glass-panel rounded-2xl p-6">
+            <h3 class="text-xl font-bold text-white mb-4">Detected Fraud Rings</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-700 text-slate-400 text-sm mono">
+                            <th class="pb-3 px-4">RING ID</th>
+                            <th class="pb-3 px-4">PATTERN TYPE</th>
+                            <th class="pb-3 px-4">MEMBERS</th>
+                            <th class="pb-3 px-4">RISK SCORE</th>
+                            <th class="pb-3 px-4">ACCOUNT IDs</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rings-table-body" class="text-sm">
+                        <!-- Dynamic content -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Suspicious Accounts Detail -->
+        <div class="glass-panel rounded-2xl p-6">
+            <h3 class="text-xl font-bold text-white mb-4">Suspicious Account Details</h3>
+            <div class="overflow-x-auto max-h-96 overflow-y-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead class="sticky top-0 bg-slate-900">
+                        <tr class="border-b border-slate-700 text-slate-400 text-sm mono">
+                            <th class="pb-3 px-4">ACCOUNT ID</th>
+                            <th class="pb-3 px-4">SUSPICION SCORE</th>
+                            <th class="pb-3 px-4">DETECTED PATTERNS</th>
+                            <th class="pb-3 px-4">RING ID</th>
+                        </tr>
+                    </thead>
+                    <tbody id="accounts-table-body" class="text-sm">
+                        <!-- Dynamic content -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex justify-center gap-4 pb-8">
+            <button onclick="downloadJSON()" class="px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold transition-all transform hover:scale-105 flex items-center gap-2 neon-border">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                </svg>
+                Download JSON Report
+            </button>
+            <button onclick="resetAnalysis()" class="px-8 py-4 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white rounded-lg font-bold transition-all">
+                New Investigation
+            </button>
+        </div>
+    </section>
+</main>
+    <!-- External JS -->
+    <script src="script.js"></script>
+
+    <footer>Created with ❤️ By Team Operation Alpha</footer>
+</body>
+</html>
